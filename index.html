@@ -1,0 +1,1570 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      3MF Print File Extractor Tool — Extract and Copy 3MF Print Data
+    </title>
+    <meta
+      name="description"
+      content="Free browser-based tool to extract print data from a single 3MF file into a searchable table and copy it as Markdown. Supports BambuStudio and OrcaSlicer. Everything runs locally in your browser."
+    />
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --border: #e2e8f0;
+        --text: #1e293b;
+        --text-muted: #64748b;
+        --accent: #2563eb;
+        --accent-hover: #1d4ed8;
+        --badge-bg: #e2e8f0;
+        --badge-text: #475569;
+        --drop-border: #cbd5e1;
+        --drop-border-hover: #2563eb;
+        --drop-bg: #f1f5f9;
+        --drop-bg-hover: #eff6ff;
+        --drop-bg-filled: #f0fdf4;
+        --drop-border-filled: #16a34a;
+        --btn-disabled-bg: #e2e8f0;
+        --btn-disabled-text: #94a3b8;
+        --error-bg: #fef2f2;
+        --error-border: #fca5a5;
+        --error-text: #dc2626;
+        --info-bg: #eff6ff;
+        --info-border: #bfdbfe;
+        --info-text: #1d4ed8;
+        --section-header-bg: #f1f5f9;
+        --section-header-text: #475569;
+        --mono: "SF Mono", "Cascadia Code", "Fira Code", "Consolas", monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --surface: #1e293b;
+          --border: #334155;
+          --text: #f1f5f9;
+          --text-muted: #94a3b8;
+          --accent: #3b82f6;
+          --accent-hover: #60a5fa;
+          --badge-bg: #334155;
+          --badge-text: #94a3b8;
+          --drop-border: #475569;
+          --drop-border-hover: #3b82f6;
+          --drop-bg: #1e293b;
+          --drop-bg-hover: #172554;
+          --drop-bg-filled: #052e16;
+          --drop-border-filled: #16a34a;
+          --btn-disabled-bg: #334155;
+          --btn-disabled-text: #64748b;
+          --error-bg: #450a0a;
+          --error-border: #b91c1c;
+          --error-text: #fca5a5;
+          --info-bg: #172554;
+          --info-border: #1e40af;
+          --info-text: #93c5fd;
+          --section-header-bg: #1e293b;
+          --section-header-text: #94a3b8;
+        }
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 28px 16px 0;
+        line-height: 1.6;
+      }
+
+      #app {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      #header {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+      #header h1 {
+        font-size: 1.875rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+      }
+      #header .tagline {
+        color: var(--text-muted);
+        font-size: 0.9375rem;
+        margin-bottom: 14px;
+      }
+
+      .header-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+      }
+      .header-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        line-height: 1.4;
+      }
+      .header-meta-item::before {
+        content: "";
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.45;
+        flex-shrink: 0;
+      }
+
+      #drop-zone-row {
+        display: grid;
+        grid-template-columns: minmax(0, 720px);
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .drop-zone {
+        border: 2px dashed var(--drop-border);
+        border-radius: 12px;
+        background: var(--drop-bg);
+        padding: 26px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        position: relative;
+      }
+      .drop-zone:hover,
+      .drop-zone.drag-over {
+        border-color: var(--drop-border-hover);
+        background: var(--drop-bg-hover);
+      }
+      .drop-zone.filled {
+        border-style: solid;
+        border-color: var(--drop-border-filled);
+        background: var(--drop-bg-filled);
+      }
+      .drop-zone input[type="file"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .drop-zone label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 7px;
+        cursor: pointer;
+      }
+      .zone-icon {
+        font-size: 1.875rem;
+        line-height: 1;
+      }
+      .zone-title {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .zone-hint {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+      }
+      .file-name {
+        margin-top: 10px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--drop-border-filled);
+        word-break: break-all;
+        min-height: 1.3em;
+      }
+      .slicer-info {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        min-height: 1.2em;
+        margin-top: 2px;
+      }
+
+      #action-row {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 28px;
+      }
+      #action-buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        font-family: inherit;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          color 0.15s,
+          border-color 0.15s;
+      }
+      #btn-extract {
+        background: var(--accent);
+        color: #fff;
+        padding: 10px 32px;
+      }
+      #btn-extract:hover:not(:disabled) {
+        background: var(--accent-hover);
+      }
+      #btn-extract:disabled {
+        background: var(--btn-disabled-bg);
+        color: var(--btn-disabled-text);
+        cursor: not-allowed;
+      }
+      #btn-reset {
+        background: transparent;
+        color: var(--text-muted);
+        padding: 10px 18px;
+        border: 1px solid var(--border);
+      }
+      #btn-reset:hover {
+        color: var(--text);
+        border-color: var(--text-muted);
+      }
+
+      #status-msg {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        min-height: 24px;
+      }
+      .spinner {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        border: 2.5px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      #error-banner {
+        background: var(--error-bg);
+        border: 1px solid var(--error-border);
+        color: var(--error-text);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 0.875rem;
+        display: none;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      #error-close {
+        margin-left: auto;
+        background: none;
+        color: var(--error-text);
+        font-size: 1.25rem;
+        font-weight: 400;
+        padding: 0 2px;
+        line-height: 1;
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .info-banner {
+        background: var(--info-bg);
+        border: 1px solid var(--info-border);
+        color: var(--info-text);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.8125rem;
+        margin-bottom: 12px;
+      }
+
+      #results {
+        display: none;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 48px;
+      }
+
+      #extract-header {
+        padding: 13px 20px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.875rem;
+        color: var(--text-muted);
+      }
+
+      #tab-bar {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        padding: 0 16px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      #tab-bar::-webkit-scrollbar {
+        display: none;
+      }
+      .tab-btn {
+        background: none;
+        color: var(--text-muted);
+        padding: 11px 14px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: -1px;
+      }
+      .tab-btn:hover {
+        color: var(--text);
+      }
+      .tab-btn.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+      .badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: var(--badge-bg);
+        color: var(--badge-text);
+      }
+
+      .tab-panel {
+        display: none;
+        padding: 20px;
+      }
+      .tab-panel.active {
+        display: block;
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .panel-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+      .panel-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .seg-toggle {
+        display: flex;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 2px;
+        gap: 2px;
+      }
+      .seg-btn {
+        background: none;
+        color: var(--text-muted);
+        padding: 4px 12px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        transition:
+          background 0.12s,
+          color 0.12s;
+        white-space: nowrap;
+      }
+      .seg-btn.active {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      }
+      @media (prefers-color-scheme: dark) {
+        .seg-btn.active {
+          background: var(--border);
+        }
+      }
+
+      .search-wrap {
+        position: relative;
+      }
+      .search-wrap::before {
+        content: "🔍";
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.875rem;
+        pointer-events: none;
+      }
+      .search-wrap input[type="text"] {
+        font-family: inherit;
+        font-size: 0.875rem;
+        padding: 6px 10px 6px 32px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        outline: none;
+        width: 240px;
+        transition: border-color 0.15s;
+      }
+      .search-wrap input[type="text"]:focus {
+        border-color: var(--accent);
+      }
+      .search-wrap input[type="text"]::placeholder {
+        color: var(--text-muted);
+      }
+
+      .action-btn {
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+        padding: 5px 12px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border-radius: 6px;
+      }
+      .action-btn:hover {
+        color: var(--text);
+        border-color: var(--text-muted);
+      }
+      .action-btn.done {
+        color: var(--drop-border-filled);
+        border-color: var(--drop-border-filled);
+      }
+      .action-btn.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .action-btn.primary:hover {
+        color: #fff;
+        border-color: var(--accent-hover);
+        background: var(--accent-hover);
+      }
+      .action-btn.glow {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
+        animation: copyPulse 1.6s ease-out infinite;
+      }
+      @keyframes copyPulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+        }
+      }
+      .share-tip {
+        margin-bottom: 12px;
+        background: var(--info-bg);
+        border: 1px solid var(--info-border);
+        color: var(--info-text);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.8125rem;
+      }
+
+      .diff-table-wrap {
+        overflow-x: auto;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+      }
+      th {
+        background: var(--bg);
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 9px 14px;
+        text-align: left;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr.hidden-row {
+        display: none;
+      }
+      tr.section-row td {
+        background: var(--section-header-bg);
+        color: var(--section-header-text);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 6px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .key-cell {
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        word-break: break-all;
+      }
+      .value-cell {
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        word-break: break-word;
+        white-space: pre-wrap;
+      }
+      .key-friendly {
+        font-family: inherit;
+        font-size: 0.86rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .key-sub {
+        font-family: var(--mono);
+        font-size: 0.74rem;
+        color: var(--text-muted);
+        margin-top: 2px;
+        word-break: break-all;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+        color: var(--text-muted);
+      }
+      .empty-icon {
+        font-size: 2.25rem;
+        margin-bottom: 10px;
+      }
+      .empty-state p {
+        font-size: 0.9375rem;
+      }
+
+      #seo-footer {
+        border-top: 1px solid var(--border);
+        padding: 48px 20px 60px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .seo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 32px;
+      }
+      .seo-section h2 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--text);
+      }
+      .seo-section p,
+      .seo-section li {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+      .seo-section ul {
+        padding-left: 18px;
+      }
+      .seo-section li {
+        margin-bottom: 3px;
+      }
+      .seo-bottom {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        text-align: center;
+      }
+
+      #jump-top {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--accent);
+        color: #fff;
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+      #jump-top.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="header">
+        <h1>3MF Print File Extractor Tool</h1>
+        <p class="tagline">
+          Extract all print settings from a .3mf file into a searchable table,
+          then copy it as Markdown.
+        </p>
+        <div class="header-meta">
+          <span class="header-meta-item"
+            >Built for BambuStudio and OrcaSlicer, and compatible with many 3MF
+            files that include project settings data</span
+          >
+          <span class="header-meta-item"
+            >Runs 100% locally in your browser — your file never leaves your
+            device</span
+          >
+        </div>
+      </div>
+
+      <div id="drop-zone-row">
+        <div class="drop-zone" id="zone-file">
+          <input type="file" id="input-file" accept=".3mf" />
+          <label for="input-file">
+            <span class="zone-icon">📂</span>
+            <span class="zone-title">3MF Print File</span>
+            <span class="zone-hint"
+              >Drop a .3mf file here, or click to browse</span
+            >
+          </label>
+          <p class="file-name" id="file-name"></p>
+          <p class="slicer-info" id="slicer-info"></p>
+        </div>
+      </div>
+
+      <div id="action-row">
+        <div id="action-buttons">
+          <button id="btn-extract" disabled>Extract Print Data</button>
+          <button id="btn-reset">Reset</button>
+        </div>
+        <div id="status-msg"></div>
+      </div>
+
+      <div id="error-banner">
+        <span id="error-text"></span>
+        <button id="error-close" title="Dismiss">×</button>
+      </div>
+
+      <div id="results">
+        <div id="extract-header"></div>
+        <div id="tab-bar">
+          <button class="tab-btn active" data-tab="data">
+            Print Data <span class="badge" id="badge-data">—</span>
+          </button>
+          <button class="tab-btn" data-tab="gcode">
+            G-code Sections <span class="badge" id="badge-gcode">—</span>
+          </button>
+        </div>
+        <div id="panel-data" class="tab-panel active"></div>
+        <div id="panel-gcode" class="tab-panel"></div>
+      </div>
+    </div>
+
+    <footer id="seo-footer">
+      <div class="seo-grid">
+        <div class="seo-section">
+          <h2>What is the 3MF Print File Extractor Tool?</h2>
+          <p>
+            A free, browser-based utility for 3D printing users. Upload one
+            <code>.3mf</code> file and extract its print settings into a clear
+            table you can search and copy.
+          </p>
+        </div>
+        <div class="seo-section">
+          <h2>What data is extracted?</h2>
+          <p>
+            The tool reads <code>Metadata/project_settings.config</code> inside
+            your 3MF file, parses the settings JSON, and flattens every value
+            into key paths like <code>filament_type[0]</code> so you can inspect
+            or share them quickly.
+          </p>
+        </div>
+        <div class="seo-section">
+          <h2>How do I share the data?</h2>
+          <p>
+            After extraction, click <strong>Copy as Markdown Table</strong>.
+            Paste it into forums, Reddit, chat apps, or AI tools to get print
+            troubleshooting help without sharing your 3D model file.
+          </p>
+        </div>
+        <div class="seo-section">
+          <h2>Privacy &amp; Security</h2>
+          <ul>
+            <li>All processing happens locally in JavaScript</li>
+            <li>Your file is never uploaded to any server</li>
+            <li>No extracted data is transmitted anywhere</li>
+            <li>
+              The only external resource is JSZip loaded with a security hash
+              (SRI)
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p class="seo-bottom">
+        3MF Print File Extractor Tool · Markdown-ready output · Free &amp; open
+        source · No data leaves your device
+      </p>
+    </footer>
+
+    <button id="jump-top">↑ Top</button>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+      integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      (function () {
+        "use strict";
+
+        const state = {
+          file: null,
+          zip: null,
+          obj: null,
+          dataRows: [],
+          gcodeRows: [],
+        };
+
+        const PRINTER_PROFILE_KEYS = [
+          "machine_type",
+          "printer_model",
+          "print_settings_id",
+          "layer_height",
+          "initial_layer_height",
+          "nozzle_diameter",
+          "sparse_infill_density",
+          "sparse_infill_pattern",
+        ];
+
+        const FILAMENT_PROFILE_KEYS = [
+          "filament_settings_id",
+          "filament_type",
+          "filament_vendor",
+          "filament_colour",
+          "nozzle_temperature",
+          "nozzle_temperature_initial_layer",
+          "bed_temperature",
+          "bed_temperature_initial_layer",
+          "filament_flow_ratio",
+          "filament_max_volumetric_speed",
+        ];
+
+        const PRIORITY_PREFIXES = [
+          "machine_type",
+          "printer_model",
+          "print_settings_id",
+          "filament_settings_id[0]",
+          "layer_height",
+          "initial_layer_height",
+          "nozzle_diameter",
+          "filament_type[0]",
+          "filament_flow_ratio[0]",
+          "nozzle_temperature[0]",
+          "bed_temperature[0]",
+          "sparse_infill_density",
+          "sparse_infill_pattern",
+          "wall_loops",
+          "top_shell_layers",
+          "bottom_shell_layers",
+        ];
+
+        const SORT_GROUPS = [
+          {
+            label: "Printer & Profile",
+            test: (key) =>
+              /^(machine_type|printer_model|max_print_height|printable_area|nozzle_diameter|print_settings_id|layer_height|initial_layer_height)\b/.test(
+                key,
+              ),
+          },
+          {
+            label: "Filament & Temperature",
+            test: (key) =>
+              /^(filament_|nozzle_temperature|bed_temperature)/.test(key),
+          },
+          {
+            label: "Quality & Infill",
+            test: (key) => /(wall|shell|infill|seam|ironing|quality)/.test(key),
+          },
+          {
+            label: "Speed & Motion",
+            test: (key) => /(speed|accel|acceleration|jerk|travel)/.test(key),
+          },
+          {
+            label: "Cooling, Support & Adhesion",
+            test: (key) =>
+              /(cool|fan|retract|support|raft|brim|skirt|adhesion)/.test(key),
+          },
+        ];
+
+        const $ = (id) => document.getElementById(id);
+
+        function mkEl(tag, props, children) {
+          const e = document.createElement(tag);
+          if (props) {
+            for (const [k, v] of Object.entries(props)) {
+              if (k === "className") e.className = v;
+              else if (k === "textContent") e.textContent = v;
+              else e.setAttribute(k, v);
+            }
+          }
+          if (children) {
+            for (const c of children) {
+              if (c == null) continue;
+              e.appendChild(
+                typeof c === "string" ? document.createTextNode(c) : c,
+              );
+            }
+          }
+          return e;
+        }
+
+        function parseJSON(text) {
+          if (!text) return null;
+          try {
+            return JSON.parse(text);
+          } catch {
+            return null;
+          }
+        }
+
+        function formatScalar(value) {
+          if (value === null) return "null";
+          if (value === undefined) return "—";
+          if (typeof value === "string")
+            return value.trim() === "" ? '""' : value;
+          if (typeof value === "number" || typeof value === "boolean")
+            return String(value);
+          return JSON.stringify(value);
+        }
+
+        function flattenData(value, path, outRows) {
+          if (Array.isArray(value)) {
+            if (value.length === 0) {
+              outRows.push({ key: path, value: "[]" });
+              return;
+            }
+            value.forEach((item, i) =>
+              flattenData(item, `${path}[${i}]`, outRows),
+            );
+            return;
+          }
+
+          if (value && typeof value === "object") {
+            const keys = Object.keys(value);
+            if (keys.length === 0) {
+              outRows.push({ key: path, value: "{}" });
+              return;
+            }
+            keys.sort((a, b) => a.localeCompare(b));
+            for (const k of keys) {
+              const nextPath = path ? `${path}.${k}` : k;
+              flattenData(value[k], nextPath, outRows);
+            }
+            return;
+          }
+
+          outRows.push({ key: path || "(root)", value: formatScalar(value) });
+        }
+
+        function isGcodeKey(keyPath) {
+          return /gcode/i.test(keyPath);
+        }
+
+        function ensureProfileRows(dataRows, obj) {
+          if (!obj || typeof obj !== "object") return;
+          const existing = new Set(dataRows.map((r) => r.key));
+          const add = (key, value) => {
+            if (existing.has(key)) return;
+            dataRows.push({ key, value: formatScalar(value) });
+            existing.add(key);
+          };
+
+          for (const key of PRINTER_PROFILE_KEYS) {
+            if (obj[key] !== undefined) add(key, obj[key]);
+          }
+          for (const key of FILAMENT_PROFILE_KEYS) {
+            const raw = obj[key];
+            if (Array.isArray(raw)) {
+              raw.forEach((v, i) => add(`${key}[${i}]`, v));
+            } else if (raw !== undefined) {
+              add(key, raw);
+            }
+          }
+        }
+
+        function normalizeKeyForPriority(key) {
+          return key.replace(/\.\d+\./g, ".").toLowerCase();
+        }
+
+        function priorityIndex(key) {
+          const nKey = normalizeKeyForPriority(key);
+          for (let i = 0; i < PRIORITY_PREFIXES.length; i++) {
+            const p = PRIORITY_PREFIXES[i];
+            if (
+              nKey === p ||
+              nKey.startsWith(`${p}.`) ||
+              nKey.startsWith(`${p}[`)
+            )
+              return i;
+          }
+          return Number.POSITIVE_INFINITY;
+        }
+
+        function humanizeKey(key) {
+          return key
+            .replace(/\[(\d+)\]/g, " $1 ")
+            .replace(/[._]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .replace(/\b\w/g, (c) => c.toUpperCase());
+        }
+
+        function buildSortedRows(rawRows) {
+          const mostImportant = rawRows
+            .filter((r) => Number.isFinite(priorityIndex(r.key)))
+            .sort((a, b) => {
+              const diff = priorityIndex(a.key) - priorityIndex(b.key);
+              return diff !== 0 ? diff : a.key.localeCompare(b.key);
+            });
+
+          const used = new Set(mostImportant.map((r) => r.key));
+          const leftovers = rawRows.filter((r) => !used.has(r.key));
+          const grouped = SORT_GROUPS.map((g) => ({
+            label: g.label,
+            rows: [],
+          }));
+          const otherRows = [];
+
+          for (const row of leftovers) {
+            const key = row.key.toLowerCase();
+            let matched = false;
+            for (let i = 0; i < SORT_GROUPS.length; i++) {
+              if (SORT_GROUPS[i].test(key)) {
+                grouped[i].rows.push(row);
+                matched = true;
+                break;
+              }
+            }
+            if (!matched) otherRows.push(row);
+          }
+
+          for (const g of grouped)
+            g.rows.sort((a, b) => a.key.localeCompare(b.key));
+          otherRows.sort((a, b) => a.key.localeCompare(b.key));
+
+          const out = [];
+          if (mostImportant.length > 0) {
+            out.push({ isSection: true, label: "Most Important (Start Here)" });
+            out.push(...mostImportant);
+          }
+          for (const g of grouped) {
+            if (g.rows.length === 0) continue;
+            out.push({ isSection: true, label: g.label });
+            out.push(...g.rows);
+          }
+          if (otherRows.length > 0) {
+            out.push({ isSection: true, label: "Other Settings" });
+            out.push(...otherRows);
+          }
+          return out;
+        }
+
+        async function loadZip(file) {
+          try {
+            return await JSZip.loadAsync(file);
+          } catch {
+            throw new Error(
+              `"${file.name}" could not be read as a ZIP/3MF file. Is it a valid .3mf?`,
+            );
+          }
+        }
+
+        async function readZipText(zip, path) {
+          const entry = zip.file(path);
+          if (!entry) return null;
+          try {
+            return await entry.async("string");
+          } catch {
+            return null;
+          }
+        }
+
+        async function detectSlicer(zip) {
+          const modelText = await readZipText(zip, "3D/3dmodel.model");
+          if (modelText) {
+            const rx = /<metadata\s+name=["']application["'][^>]*>([^<]+)</i;
+            const m = modelText.match(rx);
+            if (m) return splitSlicerString(m[1]);
+          }
+
+          const sliceText = await readZipText(
+            zip,
+            "Metadata/slice_info.config",
+          );
+          if (sliceText) {
+            const mType = sliceText.match(
+              /key=["']X-BBL-Client-Type["']\s+value=["']([^"']+)["']/i,
+            );
+            const mVer = sliceText.match(
+              /key=["']X-BBL-Client-Version["']\s+value=["']([^"']+)["']/i,
+            );
+            if (mType) return { name: mType[1], version: mVer ? mVer[1] : "" };
+          }
+
+          return { name: "Unknown slicer", version: "" };
+        }
+
+        function splitSlicerString(s) {
+          const text = String(s || "").trim();
+          const m = text.match(/^([A-Za-z][A-Za-z ]+?)[-_\s]+(\d[\d.].*)$/);
+          if (m) return { name: m[1].trim(), version: m[2].trim() };
+          return { name: text || "Unknown slicer", version: "" };
+        }
+
+        function buildMarkdownTable(rows, fileName, heading) {
+          const esc = (s) =>
+            String(s)
+              .replace(/\|/g, "\\|")
+              .replace(/[\r\n]+/g, " ");
+          const lines = [
+            `**${heading}**`,
+            "",
+            `File: \`${fileName}\``,
+            "",
+            "| Setting | Value |",
+            "|:---|:---|",
+          ];
+
+          for (const row of rows) {
+            if (row.isSection) {
+              lines.push(`| **${esc(row.label)}** | |`);
+            } else {
+              lines.push(`| ${esc(row.key)} | ${esc(row.value)} |`);
+            }
+          }
+
+          lines.push("", "*Extracted using 3MF Print File Extractor Tool*");
+          return lines.join("\n");
+        }
+
+        function buildTable(headerLabels, bodyRows) {
+          const wrap = mkEl("div", { className: "diff-table-wrap" });
+          const table = document.createElement("table");
+          const thead = document.createElement("thead");
+          const headTr = document.createElement("tr");
+          for (const h of headerLabels)
+            headTr.appendChild(mkEl("th", { textContent: h }));
+          thead.appendChild(headTr);
+          table.appendChild(thead);
+
+          const tbody = document.createElement("tbody");
+          for (const r of bodyRows) tbody.appendChild(r);
+          table.appendChild(tbody);
+
+          wrap.appendChild(table);
+          return wrap;
+        }
+
+        function renderInfoBanner(parent, msg) {
+          parent.appendChild(
+            mkEl("div", { className: "info-banner", textContent: msg }),
+          );
+        }
+
+        function renderEmptyState(parent, msg) {
+          const wrap = mkEl("div", { className: "empty-state" });
+          wrap.appendChild(
+            mkEl("div", { className: "empty-icon", textContent: "ℹ" }),
+          );
+          wrap.appendChild(mkEl("p", { textContent: msg }));
+          parent.appendChild(wrap);
+        }
+
+        function renderRowsPanel(panelId, rows, opts) {
+          const panel = $(panelId);
+          panel.textContent = "";
+          const {
+            projectSettingsMissing,
+            includeShareHelp,
+            emptyMessage,
+            enableSortToggle,
+          } = opts;
+
+          if (projectSettingsMissing) {
+            renderInfoBanner(
+              panel,
+              "Metadata/project_settings.config was not found in this file. Try exporting a project 3MF from your slicer.",
+            );
+            renderEmptyState(panel, "No print settings were extracted.");
+            return;
+          }
+
+          const header = mkEl("div", { className: "panel-header" });
+          header.appendChild(
+            mkEl("span", {
+              className: "panel-title",
+              textContent: `${rows.length} setting${rows.length !== 1 ? "s" : ""} listed`,
+            }),
+          );
+
+          const searchWrap = mkEl("div", { className: "search-wrap" });
+          const searchInput = mkEl("input", {
+            type: "text",
+            placeholder: "Filter settings…",
+          });
+          searchWrap.appendChild(searchInput);
+
+          const actions = [];
+          let viewMode = enableSortToggle ? "sorted" : "raw";
+          let sortedRows = [];
+          if (enableSortToggle) {
+            sortedRows = buildSortedRows(rows);
+            const seg = mkEl("div", { className: "seg-toggle" });
+            const btnSorted = mkEl("button", {
+              className: "seg-btn active",
+              textContent: "Sorted",
+            });
+            const btnRaw = mkEl("button", {
+              className: "seg-btn",
+              textContent: "Raw",
+            });
+            seg.appendChild(btnSorted);
+            seg.appendChild(btnRaw);
+            actions.push(seg);
+
+            btnSorted.addEventListener("click", () => {
+              viewMode = "sorted";
+              btnSorted.classList.add("active");
+              btnRaw.classList.remove("active");
+              drawTable();
+            });
+            btnRaw.addEventListener("click", () => {
+              viewMode = "raw";
+              btnRaw.classList.add("active");
+              btnSorted.classList.remove("active");
+              drawTable();
+            });
+          }
+
+          actions.push(searchWrap);
+          const copyBtn = mkEl("button", {
+            className: `action-btn ${includeShareHelp ? "primary glow" : ""}`,
+            textContent: "Copy as Markdown Table",
+          });
+          copyBtn.addEventListener("click", () => {
+            const markdownRows =
+              viewMode === "sorted" && enableSortToggle ? sortedRows : rows;
+            const md = buildMarkdownTable(
+              markdownRows,
+              state.file.name,
+              includeShareHelp
+                ? `3MF Print Data Extraction (${viewMode === "sorted" ? "Sorted" : "Raw"}, No G-code)`
+                : "3MF G-code Sections",
+            );
+            navigator.clipboard
+              .writeText(md)
+              .then(() => {
+                copyBtn.textContent = "✓ Copied!";
+                copyBtn.classList.add("done");
+                copyBtn.classList.remove("glow");
+                setTimeout(() => {
+                  copyBtn.textContent = "Copy as Markdown Table";
+                  copyBtn.classList.remove("done");
+                  if (includeShareHelp) copyBtn.classList.add("glow");
+                }, 2500);
+              })
+              .catch(() => {});
+          });
+          actions.push(copyBtn);
+
+          header.appendChild(
+            mkEl("div", { className: "panel-actions" }, actions),
+          );
+          panel.appendChild(header);
+
+          if (includeShareHelp) {
+            panel.appendChild(
+              mkEl("div", {
+                className: "share-tip",
+                textContent:
+                  'Tip: Press "Copy as Markdown Table", then paste into your favorite AI or forum to get troubleshooting help without sharing your 3D model.',
+              }),
+            );
+            renderInfoBanner(
+              panel,
+              "Default view is Sorted: key printer, profile, layer, flow, temperature, and other high-impact settings are shown first.",
+            );
+            renderInfoBanner(
+              panel,
+              "This main table intentionally excludes G-code text. Use the G-code Sections tab when you need to review start/end/custom G-code.",
+            );
+            renderInfoBanner(
+              panel,
+              "Printer profile and filament profile fields are included here for easier troubleshooting help requests.",
+            );
+          }
+
+          if (rows.length === 0) {
+            renderEmptyState(panel, emptyMessage);
+            return;
+          }
+
+          const tableWrap = mkEl("div");
+          panel.appendChild(tableWrap);
+
+          function filteredRows(displayRows, term) {
+            if (!term) return displayRows;
+            if (!displayRows.some((r) => r.isSection)) {
+              return displayRows.filter(
+                (r) =>
+                  r.key.toLowerCase().includes(term) ||
+                  String(r.value).toLowerCase().includes(term),
+              );
+            }
+            const out = [];
+            let section = null;
+            let bucket = [];
+            const flush = () => {
+              if (section && bucket.length > 0) out.push(section, ...bucket);
+              section = null;
+              bucket = [];
+            };
+            for (const row of displayRows) {
+              if (row.isSection) {
+                flush();
+                section = row;
+                continue;
+              }
+              const matches =
+                row.key.toLowerCase().includes(term) ||
+                String(row.value).toLowerCase().includes(term);
+              if (matches) bucket.push(row);
+            }
+            flush();
+            return out;
+          }
+
+          function toTableRows(displayRows) {
+            return displayRows.map((row) => {
+              const tr = document.createElement("tr");
+              if (row.isSection) {
+                tr.className = "section-row";
+                const td = document.createElement("td");
+                td.setAttribute("colspan", "2");
+                td.textContent = row.label;
+                tr.appendChild(td);
+                return tr;
+              }
+
+              const tdKey = document.createElement("td");
+              if (enableSortToggle && viewMode === "sorted") {
+                tdKey.appendChild(
+                  mkEl("div", {
+                    className: "key-friendly",
+                    textContent: humanizeKey(row.key),
+                  }),
+                );
+                tdKey.appendChild(
+                  mkEl("div", { className: "key-sub", textContent: row.key }),
+                );
+              } else {
+                tdKey.appendChild(
+                  mkEl("span", { className: "key-cell", textContent: row.key }),
+                );
+              }
+              tr.appendChild(tdKey);
+
+              const tdVal = document.createElement("td");
+              tdVal.appendChild(
+                mkEl("span", {
+                  className: "value-cell",
+                  textContent: row.value,
+                }),
+              );
+              tr.appendChild(tdVal);
+              return tr;
+            });
+          }
+
+          function drawTable() {
+            const term = searchInput.value.toLowerCase().trim();
+            const sourceRows =
+              viewMode === "sorted" && enableSortToggle ? sortedRows : rows;
+            const displayRows = filteredRows(sourceRows, term);
+            tableWrap.textContent = "";
+            if (displayRows.length === 0) {
+              renderEmptyState(tableWrap, "No settings match your filter.");
+              return;
+            }
+            tableWrap.appendChild(
+              buildTable(["Setting", "Value"], toTableRows(displayRows)),
+            );
+          }
+
+          function refreshVisibility() {
+            drawTable();
+          }
+
+          drawTable();
+          searchInput.addEventListener("input", refreshVisibility);
+        }
+
+        function switchTab(name) {
+          for (const btn of document.querySelectorAll(".tab-btn"))
+            btn.classList.toggle("active", btn.dataset.tab === name);
+          for (const panel of document.querySelectorAll(".tab-panel"))
+            panel.classList.toggle("active", panel.id === `panel-${name}`);
+        }
+
+        function updateBadge(name, count) {
+          const badge = $(`badge-${name}`);
+          if (!badge) return;
+          badge.textContent = String(count);
+        }
+
+        function setLoading(on) {
+          $("btn-extract").disabled = on || !state.file;
+          const msg = $("status-msg");
+          msg.textContent = "";
+          if (on) {
+            msg.appendChild(mkEl("div", { className: "spinner" }));
+            msg.appendChild(document.createTextNode(" Extracting print data…"));
+          }
+        }
+
+        function showError(message) {
+          $("error-text").textContent = message;
+          $("error-banner").style.display = "flex";
+        }
+
+        function onFileSelected(file) {
+          if (!file) return;
+          if (!file.name.toLowerCase().endsWith(".3mf")) {
+            showError(
+              `"${file.name}" is not a .3mf file. Please select a valid 3MF file.`,
+            );
+            return;
+          }
+
+          state.file = file;
+          $("file-name").textContent = file.name;
+          $("zone-file").classList.add("filled");
+          $("slicer-info").textContent = "";
+          $("btn-extract").disabled = false;
+        }
+
+        function resetAll() {
+          state.file = null;
+          state.zip = null;
+          state.obj = null;
+          state.dataRows = [];
+          state.gcodeRows = [];
+
+          $("input-file").value = "";
+          $("file-name").textContent = "";
+          $("slicer-info").textContent = "";
+          $("zone-file").classList.remove("filled");
+
+          $("extract-header").textContent = "";
+          $("panel-data").textContent = "";
+          $("panel-gcode").textContent = "";
+          $("results").style.display = "none";
+          $("error-banner").style.display = "none";
+          $("status-msg").textContent = "";
+          $("btn-extract").disabled = true;
+          updateBadge("data", "—");
+          updateBadge("gcode", "—");
+          switchTab("data");
+        }
+
+        async function runExtraction() {
+          if (!state.file) return;
+
+          if (typeof JSZip === "undefined") {
+            showError(
+              "Could not load JSZip library. Check your internet connection and reload.",
+            );
+            return;
+          }
+
+          $("error-banner").style.display = "none";
+          $("results").style.display = "none";
+          setLoading(true);
+
+          try {
+            const zip = await loadZip(state.file);
+            state.zip = zip;
+
+            const slicer = await detectSlicer(zip);
+            $("slicer-info").textContent = slicer.version
+              ? `${slicer.name} ${slicer.version}`
+              : slicer.name;
+
+            const settingsText = await readZipText(
+              zip,
+              "Metadata/project_settings.config",
+            );
+            state.obj = parseJSON(settingsText);
+
+            const allRows = [];
+            if (state.obj && typeof state.obj === "object") {
+              flattenData(state.obj, "", allRows);
+            }
+
+            const dataRows = [];
+            const gcodeRows = [];
+            for (const row of allRows) {
+              if (isGcodeKey(row.key)) gcodeRows.push(row);
+              else dataRows.push(row);
+            }
+
+            ensureProfileRows(dataRows, state.obj);
+
+            dataRows.sort((a, b) => a.key.localeCompare(b.key));
+            gcodeRows.sort((a, b) => a.key.localeCompare(b.key));
+            state.dataRows = dataRows;
+            state.gcodeRows = gcodeRows;
+
+            const header = $("extract-header");
+            header.textContent = "";
+            header.appendChild(document.createTextNode("Extracted from "));
+            header.appendChild(
+              mkEl("strong", { textContent: state.file.name }),
+            );
+
+            renderRowsPanel("panel-data", dataRows, {
+              projectSettingsMissing: !settingsText,
+              includeShareHelp: true,
+              emptyMessage: "No printable settings were found.",
+              enableSortToggle: true,
+            });
+            renderRowsPanel("panel-gcode", gcodeRows, {
+              projectSettingsMissing: !settingsText,
+              includeShareHelp: false,
+              emptyMessage: "No G-code sections were found in this file.",
+              enableSortToggle: false,
+            });
+            updateBadge("data", dataRows.length);
+            updateBadge("gcode", gcodeRows.length);
+            switchTab("data");
+
+            $("results").style.display = "block";
+            $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+          } catch (err) {
+            showError(
+              err.message || "An unexpected error occurred. Please try again.",
+            );
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        function initDragDrop(zoneEl) {
+          zoneEl.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            zoneEl.classList.add("drag-over");
+          });
+
+          zoneEl.addEventListener("dragleave", (e) => {
+            if (!zoneEl.contains(e.relatedTarget))
+              zoneEl.classList.remove("drag-over");
+          });
+
+          zoneEl.addEventListener("drop", (e) => {
+            e.preventDefault();
+            zoneEl.classList.remove("drag-over");
+            const file = e.dataTransfer?.files[0];
+            if (file) onFileSelected(file);
+          });
+        }
+
+        function init() {
+          initDragDrop($("zone-file"));
+
+          $("input-file").addEventListener("change", (e) =>
+            onFileSelected(e.target.files[0]),
+          );
+          $("btn-extract").addEventListener("click", runExtraction);
+          $("btn-reset").addEventListener("click", resetAll);
+          $("error-close").addEventListener("click", () => {
+            $("error-banner").style.display = "none";
+          });
+          for (const btn of document.querySelectorAll(".tab-btn"))
+            btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+
+          const jumpBtn = $("jump-top");
+          window.addEventListener(
+            "scroll",
+            () => {
+              jumpBtn.classList.toggle("visible", window.scrollY > 400);
+            },
+            { passive: true },
+          );
+          jumpBtn.addEventListener("click", () =>
+            window.scrollTo({ top: 0, behavior: "smooth" }),
+          );
+        }
+
+        document.addEventListener("DOMContentLoaded", init);
+      })();
+    </script>
+  </body>
+</html>
